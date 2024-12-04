@@ -7,6 +7,7 @@ import {
   SiTiktok,
   SiX
 } from "react-icons/si"
+import { Select, SelectItem, Input, Switch, Card, CardBody, Tabs, Tab } from '@nextui-org/react'
 
 const platformInfo = {
   instagram: {
@@ -21,7 +22,8 @@ const platformInfo = {
     placeholder: 'Numeric ID required',
     instructions: `To get your Facebook Page ID:
 1. Go to www.facebook.com/YOUR_PAGE_NAME
-2. Click "About" on the left sidebar
+2. Click "About"
+3. Click "Page Transparency"
 3. Scroll down to "Page ID"`,
     icon: SiFacebook,
     color: '#1877F2'
@@ -59,7 +61,6 @@ const PlatformOption = ({ value }) => {
 
 const QRCodeWithLogo = ({ url, platform, customLogo }) => {
   const Icon = platformInfo[platform].icon;
-
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}&bgcolor=FFFFFF&format=svg&qzone=4&margin=2&ecc=H`;
 
   return (
@@ -89,6 +90,7 @@ function App() {
   const [username, setUsername] = useState('')
   const [links, setLinks] = useState(null)
   const [customLogo, setCustomLogo] = useState(null)
+  const [isAndroid, setIsAndroid] = useState(true)
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -99,12 +101,6 @@ function App() {
     }
   };
 
-  const handlePlatformChange = (e) => {
-    setPlatform(e.target.value)
-    setUsername('')
-    setLinks(null)
-  }
-
   const generateLinks = (e) => {
     e.preventDefault()
     const linkData = {
@@ -113,7 +109,7 @@ function App() {
         webLink: `https://instagram.com/${username}`
       },
       facebook: {
-        deepLink: `fb://page/${username}`,
+        deepLink: `fb://${isAndroid ? 'page' : 'profile'}/${username}`,
         webLink: `https://facebook.com/${username}`
       },
       tiktok: {
@@ -248,64 +244,98 @@ function App() {
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-sky-400 via-rose-100 to-lime-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8">
-        <h1 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-          Social Deep Links
-        </h1>
+        <div className="text-center space-y-3 mb-8">
+          <div className="flex items-center justify-center space-x-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-violet-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent">
+              Social QR Hub
+            </h1>
+          </div>
+          <p className="text-sm text-gray-600">Create beautiful, branded QR codes for your social profiles</p>
+        </div>
 
         <form onSubmit={generateLinks} className="space-y-6">
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Select Platform</label>
-            <select
-              value={platform}
-              onChange={handlePlatformChange}
-              className="mt-1 block w-full rounded-xl border border-gray-200 p-3 bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-              required
-            >
-              <option value="">Choose a platform</option>
-              {Object.entries(platformInfo).map(([value]) => (
-                <option key={value} value={value}>
-                  <PlatformOption value={value} />
-                </option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label="Select Platform"
+            placeholder="Choose a platform"
+            selectedKeys={platform ? [platform] : []}
+            onChange={(e) => {
+              setPlatform(e.target.value)
+              setUsername('')
+              setLinks(null)
+            }}
+            variant="bordered"
+            required
+            renderValue={(items) => {
+              if (!items.length) return null;
+              const selectedPlatform = items[0].key;
+              return (
+                <div className="flex items-center gap-2">
+                  <PlatformIcon platform={selectedPlatform.toString()} />
+                  {selectedPlatform.toString().charAt(0).toUpperCase() + selectedPlatform.toString().slice(1)}
+                </div>
+              );
+            }}
+          >
+            {Object.entries(platformInfo).map(([value]) => (
+              <SelectItem
+                key={value}
+                textValue={value.charAt(0).toUpperCase() + value.slice(1)}
+              >
+                <PlatformOption value={value} />
+              </SelectItem>
+            ))}
+          </Select>
 
           {platform && (
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-              <h3 className="font-medium text-blue-800 flex items-center gap-2">
-                <PlatformIcon platform={platform} /> Instructions
-              </h3>
-              <pre className="mt-2 text-sm text-blue-700 whitespace-pre-wrap">
-                {platformInfo[platform].instructions}
-              </pre>
-            </div>
+            <Card>
+              <CardBody className="space-y-2">
+                <div className="font-medium text-sm">{platformInfo[platform].inputLabel}</div>
+                {platformInfo[platform].instructions.includes('\n') ? (
+                  <ul className="list-none space-y-1 text-sm text-gray-600">
+                    {platformInfo[platform].instructions.split('\n').map((line, index) => (
+                      <li key={index} className={line.match(/^\d\./) ? "ml-4" : ""}>
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-600">{platformInfo[platform].instructions}</p>
+                )}
+              </CardBody>
+            </Card>
           )}
 
           {platform && (
             <div className="space-y-4">
-              <div className="relative">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {platformInfo[platform].inputLabel}
-                </label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="mt-1 block w-full rounded-xl border border-gray-200 p-3 bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                  required
-                  placeholder={platformInfo[platform].placeholder}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Include Logo in QR</label>
-                <button
-                  type="button"
-                  onClick={() => setCustomLogo(customLogo ? null : 'default')}
-                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${customLogo ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}
+              <Input
+                type="text"
+                label={platformInfo[platform].inputLabel}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder={platformInfo[platform].placeholder}
+                variant="bordered"
+                required
+                startContent={<PlatformIcon platform={platform} />}
+              />
+
+              <div className="flex items-center justify-between space-x-4">
+                <div className="flex items-center gap-4">
+                  <Switch
+                    defaultSelected={customLogo === 'default'}
+                    onValueChange={(checked) => setCustomLogo(checked ? 'default' : null)}
+                  >
+                    Logo in QR
+                  </Switch>
+                </div>
+                <Tabs
+                  size="sm"
+                  aria-label="Platform options"
+                  selectedKey={isAndroid ? "android" : "ios"}
+                  onSelectionChange={(key) => setIsAndroid(key === "android")}
                 >
-                  {customLogo ? 'Yes' : 'No'}
-                </button>
+                  <Tab key="android" title="Android" />
+                  <Tab key="ios" title="iOS" />
+                </Tabs>
               </div>
             </div>
           )}
@@ -322,26 +352,28 @@ function App() {
 
         {links && (
           <div className="mt-8 space-y-6">
-            <div>
-              <h2 className="text-sm font-medium text-gray-500 mb-2">Deep Link</h2>
-              <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <Card>
+              <CardBody>
+                <h2 className="text-sm font-medium text-gray-500 mb-2">Deep Link ({isAndroid ? 'Android' : 'iOS'})</h2>
                 <code className="text-sm text-gray-800">{links.deepLink}</code>
-              </div>
-            </div>
+              </CardBody>
+            </Card>
 
-            <div>
-              <h2 className="text-sm font-medium text-gray-500 mb-2">Web Link</h2>
-              <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+            <Card>
+              <CardBody>
+                <h2 className="text-sm font-medium text-gray-500 mb-2">Web Link</h2>
                 <code className="text-sm text-gray-800">{links.webLink}</code>
-              </div>
-            </div>
+              </CardBody>
+            </Card>
 
             <div className="grid grid-cols-2 gap-6">
               <div className="space-y-3">
                 <h2 className="text-sm font-medium text-gray-500">Deep Link QR</h2>
-                <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                  <QRCodeWithLogo url={links.deepLink} platform={platform} customLogo={customLogo} />
-                </div>
+                <Card>
+                  <CardBody>
+                    <QRCodeWithLogo url={links.deepLink} platform={platform} customLogo={customLogo} />
+                  </CardBody>
+                </Card>
                 <label className="block w-full cursor-pointer bg-gray-100 hover:bg-gray-200 p-2 rounded-lg shadow-sm transition-colors text-center mb-2">
                   <input
                     type="file"
@@ -364,9 +396,11 @@ function App() {
 
               <div className="space-y-3">
                 <h2 className="text-sm font-medium text-gray-500">Web Link QR</h2>
-                <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                  <QRCodeWithLogo url={links.webLink} platform={platform} customLogo={customLogo} />
-                </div>
+                <Card>
+                  <CardBody>
+                    <QRCodeWithLogo url={links.webLink} platform={platform} customLogo={customLogo} />
+                  </CardBody>
+                </Card>
                 <label className="block w-full cursor-pointer bg-gray-100 hover:bg-gray-200 p-2 rounded-lg shadow-sm transition-colors text-center mb-2">
                   <input
                     type="file"
@@ -389,6 +423,30 @@ function App() {
             </div>
           </div>
         )}
+      </div>
+      <div className="max-w-md mx-auto mt-6 text-center">
+        <a
+          href="https://www.buymeacoffee.com/dgonzalez"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center px-6 py-3 bg-[#FFDD00] hover:bg-[#FFCD00] text-black font-medium rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+        >
+          <svg width="20" height="20" className="mr-2" viewBox="0 0 884 1279" fill="black">
+            <path d="M791.109 297.518L790.231 297.002L788.201 296.383C789.018 297.072 790.04 297.472 791.109 297.518Z" />
+            <path d="M803.896 388.891L802.916 389.166L803.896 388.891Z" />
+            <path d="M791.484 297.377C791.359 297.361 791.237 297.332 791.118 297.29C791.111 297.371 791.111 297.453 791.118 297.534C791.252 297.516 791.379 297.462 791.484 297.377Z" />
+            <path d="M791.113 297.529H791.244V297.447L791.113 297.529Z" />
+            <path d="M803.111 388.726L804.591 387.883L805.142 387.573L805.641 387.04C804.702 387.444 803.846 388.016 803.111 388.726Z" />
+            <path d="M793.669 299.515L792.223 298.138L791.243 297.605C791.77 298.535 792.641 299.221 793.669 299.515Z" />
+            <path d="M430.019 1186.18C428.864 1186.68 427.852 1187.46 427.076 1188.45L427.988 1187.87C428.608 1187.3 429.485 1186.63 430.019 1186.18Z" />
+            <path d="M641.187 1144.63C641.187 1143.33 640.551 1143.57 640.705 1148.21C640.705 1147.84 640.86 1147.46 640.929 1147.1C641.015 1146.27 641.084 1145.46 641.187 1144.63Z" />
+            <path d="M619.284 1186.18C618.129 1186.68 617.118 1187.46 616.342 1188.45L617.254 1187.87C617.873 1187.3 618.751 1186.63 619.284 1186.18Z" />
+            <path d="M281.304 1196.06C280.427 1195.3 279.354 1194.8 278.207 1194.61C279.136 1195.06 280.065 1195.51 280.684 1195.85L281.304 1196.06Z" />
+            <path d="M247.841 1164.01C247.704 1162.66 247.288 1161.35 246.619 1160.16C247.093 1161.39 247.489 1162.66 247.806 1163.94L247.841 1164.01Z" />
+            <path d="M472.623 590.836C426.682 610.503 374.546 632.802 306.976 632.802C278.71 632.746 250.58 628.868 223.353 621.274L270.086 1101.08C271.74 1121.13 280.876 1139.83 295.679 1153.46C310.482 1167.09 329.87 1174.65 349.992 1174.65C349.992 1174.65 416.254 1178.09 438.365 1178.09C462.161 1178.09 533.516 1174.65 533.516 1174.65C553.636 1174.65 573.019 1167.08 587.819 1153.45C602.619 1139.82 611.752 1121.13 613.406 1101.08L663.459 570.876C641.091 563.237 618.516 558.161 593.068 558.161C549.054 558.144 513.591 573.303 472.623 590.836Z" />
+          </svg>
+          Buy me a coffee
+        </a>
       </div>
     </div>
   )
